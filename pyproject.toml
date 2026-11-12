@@ -1,0 +1,23 @@
+[project]
+name = "peogai"
+version = "0.1.0"
+description = "A tiny local multi-repository repair agent"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+peogai = "peogai.cli:main"
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools.packages.find]
+include = ["peogai*"]
+
+[tool.setuptools.package-data]
+peogai = ["frontend/*.html", "frontend/*.css", "frontend/*.js"]

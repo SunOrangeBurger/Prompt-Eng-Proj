@@ -1,0 +1,8 @@
+{
+  "name": "parcel-shop",
+  "repos": {
+    "settings-lib": {"path": "repos/settings-lib", "depends_on": []},
+    "pricing-lib": {"path": "repos/pricing-lib", "depends_on": []},
+    "shop-service": {"path": "repos/shop-service", "depends_on": ["settings-lib", "pricing-lib"]}
+  }
+}
