@@ -20,7 +20,7 @@ def main() -> None:
     fix.add_argument("--model", default="qwen2.5-coder:7b")
     fix.add_argument("--attempts", type=int, default=2)
     fix.add_argument("--run-tests", action="store_true", help="Execute trusted repository tests on your machine")
-    demo = sub.add_parser("demo", help="Repair planted issues sequentially, carrying each validated candidate forward")
+    demo = sub.add_parser("demo", help="Review planted issues sequentially; explicitly approve each patch")
     demo.add_argument("workspace", type=Path, nargs="?", default=Path("demo"))
     demo.add_argument("--model", default="qwen2.5-coder:7b")
     demo.add_argument("--attempts", type=int, default=2)
@@ -30,7 +30,7 @@ def main() -> None:
     serve.add_argument("--attempts", type=int, default=2)
     serve.add_argument("--port", type=int, default=8765)
     serve.add_argument("--open", action="store_true", help="Open the dashboard in your default browser")
-    serve.add_argument("--autostart", action="store_true", help="Run the demo immediately")
+    serve.add_argument("--autostart", action="store_true", help="Investigate the first issue immediately; application still requires approval")
     args = parser.parse_args()
     try:
         if args.command == "scan":
@@ -58,7 +58,18 @@ def main() -> None:
                 elif kind == "repair_finished":
                     print(f"{data['status']}: {data['run']}", flush=True)
             with DEMO_LOCK:
-                summary = run_demo(args.model, args.attempts, args.run_tests, emit)
+                def review(payload: dict) -> bool:
+                    print("\nProblem: " + payload["diagnosis"])
+                    print("Fix: " + payload["explanation"])
+                    print("Risk: " + payload["risk"])
+                    print(payload["diff"])
+                    for check in payload["checks"]:
+                        print(f"{'BASELINE FAILURES REMAIN' if check.get('baseline_failures') else 'PASS' if check['passed'] else 'FAIL'}: {check['name']}")
+                    try:
+                        return input("Apply this exact validated patch? Type apply to approve: ").strip().lower() == "apply"
+                    except EOFError:
+                        return False
+                summary = run_demo(args.model, args.attempts, args.run_tests, emit, reviewer=review)
             if summary["status"] != "completed":
                 raise SystemExit(1)
             print(f"Demo summary: {PROJECT / 'demo/.peogai/demo-latest.json'}")

@@ -14,12 +14,20 @@ TEMP.mkdir(parents=True, exist_ok=True)
 
 def fake_model(*args: object) -> Proposal:
     issue = args[0]
-    if getattr(issue, "rule") == "unsafe-eval":
-        return Proposal("Literal parsing", [Edit("    value = eval(text)",
-                                                "    import ast\n    value = ast.literal_eval(text)")])
-    return Proposal("Simplify boolean return", [Edit(
-        "    if total >= 100:\n        return True\n    else:\n        return False",
-        "    return bool(total >= 100)")])
+    rule = getattr(issue, "rule")
+    if rule == "unsafe-eval":
+        edit = Edit("    value = eval(text)", "    import ast\n    value = ast.literal_eval(text)")
+    elif rule == "sql-interpolation":
+        edit = Edit("    return connection.execute(f\"SELECT id, customer FROM orders WHERE customer = '{customer}'\").fetchall()",
+                    "    return connection.execute(\"SELECT id, customer FROM orders WHERE customer = ?\", (customer,)).fetchall()")
+    elif rule == "unchecked-path":
+        edit = Edit("    path = Path(root) / filename", "    base = Path(root).resolve()\n    path = (base / filename).resolve()\n    if not path.is_relative_to(base):\n        raise ValueError('Path escapes invoice folder')")
+    elif rule == "empty-list-check":
+        edit = Edit("    if len(items) == 0:", "    if not items:")
+    else:
+        condition = "email and opted_in" if getattr(issue, "repo") == "notifications-lib" else "total >= 100"
+        edit = Edit(f"    if {condition}:\n        return True\n    else:\n        return False", f"    return bool({condition})")
+    return Proposal("Preserve valid input behavior", [edit], "A planted issue in the highlighted code", "Tests are bounded evidence", "Check the downstream contracts")
 
 
 class DemoTests(unittest.TestCase):
@@ -34,21 +42,22 @@ class DemoTests(unittest.TestCase):
                 events.append((kind, data))
             for _ in range(2):
                 events.clear()
-                summary = run_demo("fake", 1, True, emit, root, fake_model)
+                summary = run_demo("fake", 1, True, emit, root, fake_model, reviewer=lambda _: True)
                 self.assertEqual(summary["status"], "completed")
                 self.assertEqual(summary["remaining_findings"], 0)
-                self.assertEqual(len(events[0][1]["issues"]), 2)
+                self.assertEqual(len(events[0][1]["issues"]), 6)
                 self.assertEqual(events[0][0], "reset")
-                self.assertEqual(sum(kind == "applied" for kind, _ in events), 2)
+                self.assertEqual(sum(kind == "applied" for kind, _ in events), 6)
+                self.assertEqual(sum(kind == "human_decision" for kind, _ in events), 6)
                 self.assertIn("proposal", [kind for kind, _ in events])
                 self.assertIn("validation", [kind for kind, _ in events])
                 self.assertEqual(len(scan(root / "demo")), 0)
-                self.assertEqual(len(scan(root / "fixtures/demo")), 2)
+                self.assertEqual(len(scan(root / "fixtures/demo")), 6)
                 self.assertEqual(sentinel.read_text(), "keep")
             (root / "demo" / "extra.txt").write_text("temporary")
             reset_demo(root)
             self.assertFalse((root / "demo" / "extra.txt").exists())
-            self.assertEqual(len(scan(root / "demo")), 2)
+            self.assertEqual(len(scan(root / "demo")), 6)
             history = (root / ".peogai/demo-history.jsonl").read_text().splitlines()
             self.assertEqual(len(history), 2)
             self.assertTrue(all(json.loads(line)["status"] == "completed" for line in history))

@@ -3,11 +3,13 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 from dataclasses import asdict
 from datetime import datetime, timezone
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable
 
@@ -56,6 +58,37 @@ def edit_source(source: str, proposal: Proposal) -> str:
     return source
 
 
+def test_cases(checks: list[Check]) -> dict[str, str]:
+    cases: dict[str, str] = {}
+    for check in checks:
+        if check.name.startswith("tests:"):
+            for name, result in re.findall(r"^(test\S+ \([^\n]+\)) \.\.\. (ok|FAIL|ERROR|skipped[^\n]*)$", check.output, re.MULTILINE):
+                cases[check.name + ":" + name] = result
+    return cases
+
+
+def regression_gates(baseline: list[Check], candidate: list[Check]) -> list[Check]:
+    """Preserve every passing test and test inventory; disclose existing failures."""
+    before, after = test_cases(baseline), test_cases(candidate)
+    result: list[Check] = []
+    for check in candidate:
+        if check.passed or not check.name.startswith("tests:"):
+            result.append(check)
+            continue
+        prefix = check.name + ":"
+        old = {k: v for k, v in before.items() if k.startswith(prefix)}
+        new = {k: v for k, v in after.items() if k.startswith(prefix)}
+        existing = (bool(new) and old.keys() == new.keys()
+                    and all(v == "ok" or (v in {"FAIL", "ERROR"} and old[k] == v) for k, v in new.items())
+                    and "FAILED (" in check.output)
+        result.append(Check(check.name, existing,
+                            ("Existing baseline failures remain; no previously passing case regressed.\n" if existing else "")
+                            + check.output, existing))
+    complete = before.keys() == after.keys() and bool(after) and all(
+        after[k] == "ok" for k in before if before[k] == "ok")
+    return result + [Check("test-inventory", complete, "Same test IDs; no previously passing test failed or was skipped")]
+
+
 def scope_check(before: str, after: str, issue: Issue) -> None:
     """Only imports and the enclosing top-level definition may change."""
     a, b = ast.parse(before), ast.parse(after)
@@ -75,6 +108,13 @@ def scope_check(before: str, after: str, issue: Issue) -> None:
         return result
     if unrelated(a, True) != unrelated(b, False):
         raise ValueError("Patch changes unrelated top-level code")
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        replacement = next((n for n in b.body if isinstance(n, type(node)) and n.name == node.name), None)
+        def signature(n: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[str, str, tuple[str, ...]]:
+            return (ast.dump(n.args), ast.dump(n.returns) if n.returns else "",
+                    tuple(ast.dump(d) for d in n.decorator_list))
+        if replacement is None or signature(node) != signature(replacement):
+            raise ValueError("Patch changes the public function signature or decorators")
     changes = sum(line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
                   for line in difflib.unified_diff(before.splitlines(), after.splitlines()))
     if changes > 60:
@@ -107,10 +147,10 @@ def repair(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool
     report: dict[str, Any] = {"issue": asdict(issue), "model": model, "status": "rejected",
         "baseline": [asdict(c) for c in baseline_checks], "attempts": [],
         "limitations": ["A filesystem copy is not a security sandbox.",
-            "Passing tests and two heuristic rules do not prove security or behavior equivalence.",
+            "Passing gates and heuristic rules do not prove security or behavior equivalence; baseline failures may remain.",
             "No dependency CVE scan, data-flow analysis, fuzzing or automatic source application."]}
     feedback = ""
-    before_signatures = {(i.path, i.rule) for i in issues}
+    before_signatures = Counter((i.path, i.rule) for i in issues)
     for attempt in range(1, attempts + 1):
         record: dict[str, Any] = {"attempt": attempt}
         try:
@@ -121,18 +161,26 @@ def repair(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool
             diff = "".join(difflib.unified_diff(source.splitlines(keepends=True), updated.splitlines(keepends=True),
                                                fromfile="a/" + issue.path, tofile="b/" + issue.path))
             event("proposal", issue=asdict(issue), attempt=attempt, explanation=proposal.explanation,
+                  diagnosis=proposal.diagnosis, risk=proposal.risk, verification=proposal.verification,
                   diff=diff, before=source, after=updated)
             scope_check(source, updated, issue)
             candidate = run / f"candidate-{attempt}"
             snapshot(baseline, candidate)
             resolve(candidate, issue.path).write_text(updated, encoding="utf-8")
             remaining = scan(candidate)
-            removed = not any(i.path == issue.path and i.rule == issue.rule and
-                              i.line <= issue.end_line for i in remaining)
-            introduced = {(i.path, i.rule) for i in remaining} - before_signatures
+            after_signatures = Counter((i.path, i.rule) for i in remaining)
+            removed = after_signatures[(issue.path, issue.rule)] == before_signatures[(issue.path, issue.rule)] - 1
+            introduced = after_signatures - before_signatures
             checks = [Check("target-rule", removed, "Targeted finding must disappear"),
                       Check("static-regressions", not introduced, str(sorted(introduced)))]
-            checks += validate(candidate, run_tests)
+            raw_checks = validate(candidate, run_tests)
+            record["raw_checks"] = [asdict(c) for c in raw_checks]
+            checks += regression_gates(baseline_checks, raw_checks)
+            if issue.oracle:
+                cases = test_cases(raw_checks)
+                oracle_cases = [v for k, v in cases.items() if ":" + issue.oracle + " (" in k]
+                checks.append(Check("target-security-test", bool(oracle_cases) and all(v == "ok" for v in oracle_cases),
+                                    f"Required regression test: {issue.oracle}"))
             event("validation", issue=asdict(issue), attempt=attempt, checks=[asdict(c) for c in checks])
             record["checks"] = [asdict(c) for c in checks]
             diff = "".join(difflib.unified_diff(source.splitlines(keepends=True), updated.splitlines(keepends=True),
@@ -142,7 +190,9 @@ def repair(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool
                 report["status"] = "validated"
                 report["candidate"] = str(candidate)
                 (run / "patch.diff").write_text(diff, encoding="utf-8")
-            feedback = json.dumps(record["checks"])[-12_000:]
+            feedback = json.dumps({"proposal": asdict(proposal),
+                                   "failed_gates": [asdict(c) for c in checks if not c.passed],
+                                   "raw_test_failures": [asdict(c) for c in raw_checks if not c.passed]})[-12_000:]
         except (ValueError, SyntaxError, RuntimeError, KeyError, TypeError, OSError) as exc:
             record["error"] = str(exc)
             feedback = json.dumps(record)[-12_000:]
@@ -162,10 +212,14 @@ def repair(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool
     for record in report["attempts"]:
         lines += ["", f"## Attempt {record['attempt']}", ""]
         if "proposal" in record:
-            lines += [record["proposal"]["explanation"], ""]
+            proposal_data = record["proposal"]
+            for label, key in (("Diagnosis", "diagnosis"), ("Proposed fix", "explanation"),
+                               ("Residual risk", "risk"), ("AI verification plan", "verification")):
+                if proposal_data.get(key):
+                    lines += [f"### {label}", "", proposal_data[key], ""]
         if "error" in record:
             lines += [f"Rejected: {record['error']}"]
-        lines += [f"- {'PASS' if c['passed'] else 'FAIL'}: {c['name']}" for c in record.get("checks", [])]
+        lines += [f"- {'BASELINE FAILURES REMAIN' if c.get('baseline_failures') else 'PASS' if c['passed'] else 'FAIL'}: {c['name']}" for c in record.get("checks", [])]
     lines += ["", "## Limits", *[f"- {s}" for s in report["limitations"]]]
     (run / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     event("repair_finished", issue=asdict(issue), status=report["status"], run=str(run),

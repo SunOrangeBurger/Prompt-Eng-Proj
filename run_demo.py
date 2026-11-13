@@ -1,4 +1,4 @@
-"""Start a fresh demo, display the dashboard and run real Ollama repairs."""
+"""Start a fresh human-review demo and prepare a real Ollama proposal."""
 import argparse
 
 from peogai.server import serve

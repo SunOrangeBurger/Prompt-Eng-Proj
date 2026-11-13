@@ -56,20 +56,35 @@ def make_server(controller: DemoController, port: int) -> ThreadingHTTPServer:
             if not self.local() or self.headers.get("X-Demo-Token") != token or (origin and origin not in valid_origins):
                 self.json(403, {"error": "Invalid local request"})
                 return
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if not 0 <= size <= 4096:
+                    raise ValueError("Request is too large")
+                data = json.loads(self.rfile.read(size)) if size else {}
+                if not isinstance(data, dict):
+                    raise ValueError("Expected a JSON object")
+            except (ValueError, UnicodeError):
+                self.json(400, {"error": "Invalid request body"})
+                return
             if self.path == "/api/run":
                 self.json(202 if controller.start() else 409, {"status": controller.snapshot()["status"]})
-            elif self.path == "/api/reset":
-                if not DEMO_LOCK.acquire(blocking=False):
-                    self.json(409, {"error": "A demo is already running"})
+            elif self.path == "/api/prepare":
+                issue_id = data.get("issue_id")
+                if not isinstance(issue_id, str) or not any(i["id"] == issue_id for i in controller.snapshot()["issues"]):
+                    self.json(400, {"error": "Choose a current issue"})
                     return
+                self.json(202 if controller.start(issue_id, reset=False) else 409, {"status": controller.snapshot()["status"]})
+            elif self.path in {"/api/approve", "/api/reject"}:
                 try:
-                    root = reset_demo(controller.project)
-                    with controller.lock:
-                        controller.state.update({"status": "ready", "events": [], **view(root)})
-                        controller.state.pop("summary", None)
-                    self.json(200, {"status": "ready"})
-                finally:
-                    DEMO_LOCK.release()
+                    if not isinstance(data.get("review_id"), str) or not isinstance(data.get("reason", ""), str):
+                        raise ValueError("A valid review ID and optional reason are required")
+                    result = controller.decision(data["review_id"], self.path == "/api/approve", data.get("reason", ""))
+                    self.json(200, result)
+                except ValueError as exc:
+                    self.json(409, {"error": str(exc)})
+            elif self.path == "/api/reset":
+                done = controller.reset()
+                self.json(200 if done else 409, {"status": "ready" if done else "running"})
             else:
                 self.json(404, {"error": "Not found"})
     return ThreadingHTTPServer(("127.0.0.1", port), Handler)

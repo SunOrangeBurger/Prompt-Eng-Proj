@@ -1,0 +1,57 @@
+{
+  "model": "qwen2.5-coder:7b",
+  "status": "passed",
+  "seconds": 219.891,
+  "approved_test_proposals": 6,
+  "final_tests": 25,
+  "final_failures": 0,
+  "reset_findings": 6,
+  "rejection_preserved_source": true,
+  "stale_id_blocked": true,
+  "simulated_reviewer": true,
+  "date": "2026-11-13",
+  "cases": [
+    {
+      "repo": "documents-lib",
+      "rule": "unchecked-path",
+      "seconds": 33.422,
+      "passed_gates": 11,
+      "baseline_failure_repos": 2
+    },
+    {
+      "repo": "records-lib",
+      "rule": "sql-interpolation",
+      "seconds": 34.891,
+      "passed_gates": 11,
+      "baseline_failure_repos": 1
+    },
+    {
+      "repo": "settings-lib",
+      "rule": "unsafe-eval",
+      "seconds": 47.984,
+      "passed_gates": 11,
+      "baseline_failure_repos": 0
+    },
+    {
+      "repo": "notifications-lib",
+      "rule": "redundant-bool",
+      "seconds": 21.718,
+      "passed_gates": 10,
+      "baseline_failure_repos": 0
+    },
+    {
+      "repo": "notifications-lib",
+      "rule": "empty-list-check",
+      "seconds": 25.406,
+      "passed_gates": 10,
+      "baseline_failure_repos": 0
+    },
+    {
+      "repo": "pricing-lib",
+      "rule": "redundant-bool",
+      "seconds": 11.422,
+      "passed_gates": 10,
+      "baseline_failure_repos": 0
+    }
+  ]
+}

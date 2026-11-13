@@ -3,6 +3,9 @@
   "repos": {
     "settings-lib": {"path": "repos/settings-lib", "depends_on": []},
     "pricing-lib": {"path": "repos/pricing-lib", "depends_on": []},
-    "shop-service": {"path": "repos/shop-service", "depends_on": ["settings-lib", "pricing-lib"]}
+    "records-lib": {"path": "repos/records-lib", "depends_on": []},
+    "documents-lib": {"path": "repos/documents-lib", "depends_on": []},
+    "notifications-lib": {"path": "repos/notifications-lib", "depends_on": ["pricing-lib"]},
+    "shop-service": {"path": "repos/shop-service", "depends_on": ["settings-lib", "pricing-lib", "records-lib", "documents-lib", "notifications-lib"]}
   }
 }

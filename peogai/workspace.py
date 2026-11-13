@@ -64,6 +64,8 @@ def scan(root: Path) -> list[Issue]:
     issues: list[Issue] = []
     for repo, entry in config["repos"].items():
         for path in files(resolve(root, entry["path"])):
+            if "tests" in path.relative_to(root).parts or path.name.startswith("test_"):
+                continue
             relative = path.relative_to(root).as_posix()
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative)
             for node in ast.walk(tree):
@@ -71,6 +73,21 @@ def scan(root: Path) -> list[Issue]:
                 kind = "security"
                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "eval":
                     rule, message = "unsafe-eval", "eval executes input as code. Use ast.literal_eval for literal data."
+                elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                      and node.func.attr == "execute" and node.args and isinstance(node.args[0], ast.JoinedStr)):
+                    rule, message = "sql-interpolation", "Interpolating input into SQL can change the query. Bind values with placeholders."
+                elif (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                      and any(isinstance(n, ast.BinOp) and isinstance(n.op, ast.Div)
+                              and isinstance(n.left, ast.Call) and isinstance(n.left.func, ast.Name)
+                              and n.left.func.id == "Path" for n in ast.walk(node))
+                      and not any(isinstance(n, ast.Attribute) and n.attr == "is_relative_to" for n in ast.walk(node))):
+                    rule, message = "unchecked-path", "A user filename is joined to a root without checking containment. Resolve both paths and reject escapes."
+                elif (isinstance(node, ast.Compare) and len(node.ops) == 1 and isinstance(node.ops[0], ast.Eq)
+                      and isinstance(node.left, ast.Call) and isinstance(node.left.func, ast.Name)
+                      and node.left.func.id == "len" and len(node.left.args) == 1
+                      and isinstance(node.comparators[0], ast.Constant) and node.comparators[0].value == 0):
+                    kind = "refactor"
+                    rule, message = "empty-list-check", "For this list parameter, replace len(items) == 0 with not items. Preserve the surrounding function."
                 elif isinstance(node, ast.If) and len(node.body) == 1 and len(node.orelse) == 1:
                     a, b = node.body[0], node.orelse[0]
                     if (isinstance(a, ast.Return) and isinstance(b, ast.Return)
@@ -79,10 +96,13 @@ def scan(root: Path) -> list[Issue]:
                         rule, message = "redundant-bool", "Replace the if/else returning True/False with return bool(condition)."
                         kind = "refactor"
                 if rule:
-                    identity = f"{relative}:{node.lineno}:{rule}"
+                    scope = next((n for n in tree.body if n.lineno <= node.lineno <= (n.end_lineno or n.lineno)), node)
+                    identity = f"{relative}:{getattr(scope, 'name', '<module>')}:{node.lineno - scope.lineno}:{rule}"
+                    oracle = {"unsafe-eval": "test_reject_executable_settings", "sql-interpolation": "test_sql_injection",
+                              "unchecked-path": "test_path_traversal"}.get(rule, "")
                     issues.append(Issue(hashlib.sha256(identity.encode()).hexdigest()[:10], repo,
                                         relative, node.lineno, node.end_lineno or node.lineno,
-                                        "security" if kind == "security" else "refactor", rule, message))
+                                        "security" if kind == "security" else "refactor", rule, message, oracle))
     return sorted(issues, key=lambda i: (i.kind != "security", i.path, i.line))
 
 

@@ -1,5 +1,81 @@
 # Run results
 
+## Human-in-the-loop demo: 13 November 2026
+
+This section supersedes the earlier two-issue demo below. Local model:
+qwen2.5-coder:7b via Ollama. The expanded scenario has 6 repos, 6 findings and
+25 repository tests. The baseline intentionally has 3 security failures.
+
+| Check | Result |
+| --- | --- |
+| Final full agent suite | 17/17 passed in 130.968 s |
+| Real-model integration with simulated reviewer decisions | Passed in 219.891 s |
+| Final repaired test workspace | 25/25 repo tests passed; 0 findings |
+| Rejected proposal | Source unchanged |
+| Stale/duplicate/wrong approval IDs | Blocked |
+| External file edits during review | Application blocked |
+| Reset after external invalid code | Restored successfully; old review invalidated |
+| Reset after the real-model integration | 6 findings restored; review history retained |
+| Browser proposal and rejection | Verified; live demo matches pristine fixture bytes |
+| Python compilation / JavaScript syntax | Passed |
+
+### Real-model cases
+
+These are actual model generations with rule-specific repair guidance. Test
+approvals/rejections were explicitly simulated in a separate disposable workspace,
+not made by a human participant or counted as human acceptance. The first proposal
+was rejected and regenerated to exercise that boundary. Timing includes validation.
+
+| Repository / rule | Accepted proposal preparation |
+| --- | ---: |
+| documents-lib / unchecked-path | 33.422 s |
+| records-lib / sql-interpolation | 34.891 s |
+| settings-lib / unsafe-eval | 47.984 s |
+| notifications-lib / redundant-bool | 21.718 s |
+| notifications-lib / empty-list-check | 25.406 s |
+| pricing-lib / redundant-bool | 11.422 s |
+
+Security proposals passed 11 gates and refactoring proposals passed 10 gates.
+The early path and SQL proposals retained respectively 2 and 1 repositories with
+unrelated baseline test failures; those were explicitly disclosed. No previously
+passing test could regress and no test could disappear. The targeted security
+regression had to pass. After all six test approvals, every repository test passed.
+
+### Browser verification
+
+Generated a real settings-parser proposal in about 15.4 seconds. Inspected the
+AI diagnosis, original highlighted lines, proposed diff, residual-risk statement,
+verification plan, affected repos, actual gates and baseline-failure labels.
+Observed Awaiting review with 6 findings and 0 applied fixes. The Apply this fix
+and Reject proposal controls were available. Rejected with an explicit browser
+verification note. The source remained identical to fixtures; the audit recorded
+rejection. No test approval was applied to the live demo workspace.
+
+Screenshots: docs/hil-review.png and docs/hil-review-full.png. Compact evidence:
+docs/hil-verification-summary.json. Full local integration evidence is under
+.peogai/hil-verification/20261113T034331Z/results.json (ignored by Git).
+
+### Rejections encountered during development
+
+Initial path proposals had broken indentation. Other responses checked lexical
+containment without resolving '..'; syntax or the targeted security regression
+rejected them. Earlier eval responses supplied incomplete replacement fragments
+or matched already-patched text; they too were rejected without source changes.
+The interface was refined to host-anchored complete functions, narrower context,
+explicit path-normalization guidance, and concise failing-test retry evidence.
+Validation gates stayed intact. A test asserting old prompt wording was updated
+to check equality with the actual system prompt. A sandbox-only HTTP check needed
+local socket access; the final full suite passed with that access.
+
+This is a bounded demonstration, not a general repair success rate or security
+proof. Model risk explanations are reviewable AI claims, not verified guarantees.
+Static type checking and mobile viewport testing were not performed. Temporary
+verification servers and the owned Ollama/model processes were stopped.
+
+---
+
+## Earlier auto-apply demo: 12 November 2026
+
 Recorded on 12 November 2026. Times below use Asia/Calcutta (IST).
 Local model: qwen2.5-coder:7b through Ollama 0.30.7. Python 3.11.14,
 Node 24.11.1, Windows. Real demo responses were not mocked.

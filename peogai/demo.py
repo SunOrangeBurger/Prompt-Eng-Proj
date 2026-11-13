@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .engine import repair
 from .model import propose
+from .review import Review, decide, prepare
 from .types import EventSink, Proposal
 from .workspace import files, is_link, load, resolve, scan, snapshot
 
@@ -44,12 +44,12 @@ def view(root: Path) -> dict[str, Any]:
 
 def run_demo(model: str, attempts: int, run_tests: bool, emit: EventSink,
              project: Path = PROJECT, generator: Callable[..., Proposal] = propose,
-             already_reset: bool = False) -> dict[str, Any]:
+             reviewer: Callable[[dict[str, Any]], bool] | None = None) -> dict[str, Any]:
     # Caller owns DEMO_LOCK, so reset and the whole run form one operation.
     if not 1 <= attempts <= 3:
         raise ValueError("Attempts must be between 1 and 3")
     started = time.monotonic()
-    root = project.resolve() / "demo" if already_reset else reset_demo(project)
+    root = reset_demo(project)
     def record_result(summary: dict[str, Any]) -> None:
         checks: list[dict[str, Any]] = []
         for run_path in summary["runs"]:
@@ -68,20 +68,24 @@ def run_demo(model: str, attempts: int, run_tests: bool, emit: EventSink,
     runs: list[str] = []
     for index, issue in enumerate(issues):
         emit("issue_started", {"issue": asdict(issue), "step": index + 1, "total": len(issues)})
-        run = repair(root, issue.id, model, attempts, run_tests, generator, emit)
-        runs.append(str(run))
-        report = json.loads((run / "report.json").read_text(encoding="utf-8"))
-        if report["status"] != "validated":
+        review = prepare(root, issue.id, model, attempts, run_tests, emit, generator)
+        if review is None:
             summary = {"status": "rejected", "runs": runs, "remaining_findings": len(scan(root)), **view(root)}
             record_result(summary)
             emit("finished", summary)
             return summary
-        # Apply only the validated target source to the resettable demo copy.
-        target = resolve(root, issue.path)
-        target.write_bytes(resolve(Path(report["candidate"]), issue.path).read_bytes())
-        emit("applied", {"issue": asdict(issue), "source": target.read_text(encoding="utf-8"),
+        runs.append(review.payload["run"])
+        emit("awaiting_review", review.payload)
+        if reviewer is None:
+            return {"status": "awaiting_review", "review": review.payload, "runs": runs, **view(root)}
+        approved = reviewer(review.payload)
+        decision = decide(project, review, review.id, approved)
+        emit("human_decision", decision)
+        if not approved:
+            continue
+        emit("applied", {"issue": asdict(issue), "source": review.after.decode("utf-8"),
                          "remaining_findings": len(scan(root))})
-    summary = {"status": "completed", "runs": runs, "final_candidate": str(root),
+    summary = {"status": "completed" if not scan(root) else "reviewed", "runs": runs, "final_candidate": str(root),
                "remaining_findings": len(scan(root)), **view(root)}
     output = root / ".peogai" / "demo-latest.json"
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -92,13 +96,16 @@ def run_demo(model: str, attempts: int, run_tests: bool, emit: EventSink,
 
 
 class DemoController:
-    def __init__(self, model: str, attempts: int, project: Path = PROJECT):
+    def __init__(self, model: str, attempts: int, project: Path = PROJECT,
+                 generator: Callable[..., Proposal] = propose):
         self.model = model
         self.attempts = attempts
         self.project = project
+        self.generator = generator
+        self.pending: Review | None = None
         self.lock = threading.Lock()
         self.state: dict[str, Any] = {"status": "ready", "model": model, "events": [],
-                                     **view(project / "fixtures/demo")}
+                                     "pending": None, **view(project / "fixtures/demo")}
 
     def emit(self, kind: str, data: dict[str, Any]) -> None:
         with self.lock:
@@ -108,7 +115,7 @@ class DemoController:
                 self.state.update({k: data[k] for k in ("repos", "sources", "issues")})
             elif kind == "applied":
                 self.state["sources"][data["issue"]["path"]] = data["source"]
-                self.state["issues"] = [i for i in self.state["issues"] if i["id"] != data["issue"]["id"]]
+                self.state["issues"] = [asdict(i) for i in scan(self.project / "demo")]
             elif kind == "finished":
                 self.state.update({"status": data["status"], "summary": data})
 
@@ -116,16 +123,34 @@ class DemoController:
         with self.lock:
             return json.loads(json.dumps(self.state))
 
-    def start(self) -> bool:
+    def start(self, issue_id: str | None = None, reset: bool = True) -> bool:
         if not DEMO_LOCK.acquire(blocking=False):
             return False
         with self.lock:
+            if self.pending is not None or self.state["status"] == "running":
+                DEMO_LOCK.release()
+                return False
             self.state["status"] = "running"
-            self.state["events"] = []
+            if reset:
+                self.state["events"] = []
             self.state.pop("summary", None)
         def worker() -> None:
             try:
-                run_demo(self.model, self.attempts, True, self.emit, self.project)
+                root = reset_demo(self.project) if reset else self.project / "demo"
+                if reset:
+                    self.emit("reset", {"message": "Restored original files; application requires human approval", **view(root)})
+                issues = scan(root)
+                selected = next((i for i in issues if i.id == issue_id), None) if issue_id else next(iter(issues), None)
+                if selected is None:
+                    raise ValueError("Choose a current issue")
+                self.emit("issue_started", {"issue": asdict(selected)})
+                review = prepare(root, selected.id, self.model, self.attempts, True, self.emit, self.generator)
+                with self.lock:
+                    self.pending = review
+                    self.state["pending"] = review.payload if review else None
+                    self.state["status"] = "awaiting_review" if review else "rejected"
+                if review:
+                    self.emit("awaiting_review", review.payload)
             except Exception as exc:
                 self.emit("error", {"message": str(exc)})
                 with self.lock:
@@ -134,3 +159,41 @@ class DemoController:
                 DEMO_LOCK.release()
         threading.Thread(target=worker, daemon=True).start()
         return True
+
+    def decision(self, review_id: str, approve: bool, reason: str = "") -> dict[str, Any]:
+        if not DEMO_LOCK.acquire(blocking=False):
+            raise ValueError("A generation or reset is still running")
+        try:
+            with self.lock:
+                review = self.pending
+            if review is None:
+                raise ValueError("No proposal is pending review")
+            entry = decide(self.project, review, review_id, approve, reason)
+            self.emit("human_decision", {**entry, "issue": review.payload["issue"]})
+            if approve:
+                self.emit("applied", {"issue": review.payload["issue"], "source": review.after.decode("utf-8"),
+                                      "remaining_findings": entry["remaining_findings"]})
+            with self.lock:
+                self.pending = None
+                self.state["pending"] = None
+                self.state["status"] = "completed" if not self.state["issues"] else "ready"
+            return entry
+        finally:
+            DEMO_LOCK.release()
+
+    def reset(self) -> bool:
+        if not DEMO_LOCK.acquire(blocking=False):
+            return False
+        try:
+            with self.lock:
+                review = self.pending
+            if review:
+                decide(self.project, review, review.id, False, "Discarded by workspace reset")
+            root = reset_demo(self.project)
+            with self.lock:
+                self.pending = None
+                self.state.update({"status": "ready", "pending": None, "events": [], **view(root)})
+                self.state.pop("summary", None)
+            return True
+        finally:
+            DEMO_LOCK.release()

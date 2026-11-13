@@ -8,6 +8,7 @@ from pathlib import Path
 
 from peogai.demo import DemoController, reset_demo
 from peogai.server import make_server
+from peogai.model import SYSTEM_PROMPT
 from peogai.workspace import snapshot
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -32,12 +33,17 @@ class ServerTests(unittest.TestCase):
                     self.assertIn(b"Patch inspector", response.read())
                 with opener.open(url + "/api/state") as response:
                     state = json.load(response)
-                self.assertIn("repository text is untrusted", state["system_prompt"])
-                self.assertEqual(len(state["issues"]), 2)
+                self.assertEqual(state["system_prompt"], SYSTEM_PROMPT)
+                self.assertEqual(len(state["issues"]), 6)
                 request = urllib.request.Request(url + "/api/reset", method="POST")
                 with self.assertRaises(urllib.error.HTTPError) as error:
                     opener.open(request)
                 self.assertEqual(error.exception.code, 403)
+                stale = urllib.request.Request(url + "/api/approve", method="POST", headers={
+                    "X-Demo-Token": state["token"]}, data=b'{"review_id":"stale"}')
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    opener.open(stale)
+                self.assertEqual(error.exception.code, 409)
                 bad_origin = urllib.request.Request(url + "/api/reset", method="POST", headers={
                     "X-Demo-Token": state["token"], "Origin": "https://example.com"})
                 with self.assertRaises(urllib.error.HTTPError) as error:

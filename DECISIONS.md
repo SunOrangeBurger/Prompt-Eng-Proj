@@ -94,3 +94,58 @@ Record development verification in tracked RUN_RESULTS.md. Append compact
 outcomes to project-level .peogai/demo-history.jsonl, outside the reset target,
 so results survive clean starts. Ignore generated reports, logs and caches in
 Git. Commit the clean planted demo and canonical fixtures.
+
+## 013 - Human-in-the-loop is the primary workflow (13 Nov)
+
+This supersedes automatic demo application in decisions 006 and 011. Generating
+or validating a candidate never applies it. The browser prepares one issue and
+pauses at awaiting_review. Only an explicit approve action for that opaque review
+ID can apply the exact validated bytes. Rejection leaves source unchanged.
+The console demo likewise requires apply for every proposal; EOF rejects it.
+Reset cancels pending review. Run one demo process at a time.
+
+Bind the review to a fingerprint of the entire source/test/config workspace,
+excluding generated state. Block approval after any external edit, even outside
+the target file. Capture reviewed bytes in memory, rather than rereading a
+mutable candidate directory at application time. Append approval/rejection,
+review ID, patch digest and reviewer note outside the reset target. Local
+operator actions are not an authenticated multi-user identity system.
+
+## 014 - A larger but inspectable scenario (13 Nov)
+
+Use six repos and six findings: eval, SQL interpolation, unchecked file paths,
+two boolean branches and a list-emptiness smell. Add downstream consumers and
+25 tests. These are deliberately planted examples, not realistic CVE coverage.
+The model receives narrow, rule-specific repair guidance and generates the
+actual replacement function and explanation; code is not substituted by a
+built-in deterministic fixer. AI explanatory claims remain reviewable statements.
+
+## 015 - Baseline-aware validation (13 Nov)
+
+With multiple vulnerabilities, the pristine baseline has three failing tests.
+Preserve every previously passing test and the entire test inventory. A security
+proposal must also pass its named security regression test. Allow unrelated
+pre-existing failures only if the same test still fails in the same way at the
+unittest status level, disclosing raw output as BASELINE FAILURES. This is a
+bounded regression heuristic, not semantic equivalence or a security proof.
+The final fully approved workspace must pass all 25 tests.
+
+## 016 - Explanation and review evidence (13 Nov)
+
+Require structured diagnosis, proposed change, residual risks and a verification
+plan from Ollama. Highlight the original lines separately from the diff, show
+transitively affected repositories and actual executed tests. Label model test
+claims as a plan. Keep human decisions separate from validation status. Real
+integration checks use a disposable workspace and explicitly label their
+approval/rejection actions as simulated reviewer choices.
+
+## 017 - Structured replacement boundary (13 Nov)
+
+Real responses exposed fragile old-text matching and whitespace handling. Ask
+the model for a complete replacement function, optionally with imports, rather
+than requiring it to retype the original anchor. The host anchors that output
+to the known editable function. Parse the response, preserve the public signature
+and decorators, enforce AST scope and size, and run all validation gates. Supply
+existing imports and the editable function instead of repeating the whole target
+file. The model still generates the actual fix and explanation; no canned fix
+is applied by the host. Rule-specific guidance remains explicit in model.py.
