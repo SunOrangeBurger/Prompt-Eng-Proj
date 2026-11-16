@@ -5,6 +5,8 @@ pretend repositories, six planted findings, and 25 cross-repository tests.
 The model proposes and explains a fix. You decide whether it is applied.
 No cloud model, database, frontend build step, or runtime Python packages.
 
+Team ownership and presentation split: [TEAM_WORK_DIVISION.md](TEAM_WORK_DIVISION.md).
+
 ## Start from scratch
 
 Requires Python 3.11+ and Ollama. In one PowerShell terminal:

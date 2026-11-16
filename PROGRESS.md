@@ -7,6 +7,11 @@ Updated: 16 November 2026 (Asia/Calcutta).
 This replaces the earlier auto-apply demo scope. Percentage is the sum of
 completed weights, not progress toward every research objective in the PDF.
 
+Team ownership is allocated equally: Sharanya owns analysis/detection, Ragul
+owns model/repair/validation safeguards, and Arun owns the IDE/application.
+Each owns one third, including module tests, documentation and demo coverage.
+The detailed handoff and two-repo/two-case allocations are in TEAM_WORK_DIVISION.md.
+
 | Milestone | Weight | Status | Evidence |
 | --- | ---: | --- | --- |
 | Typed local agent, AST detection, retrieval and candidate validation | 35% | Complete | Five rule types; scope and regression gates |
