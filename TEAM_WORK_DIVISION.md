@@ -11,8 +11,8 @@ hours or Git authorship.
 | Teammate | Primary area | Allocation |
 | --- | --- | ---: |
 | Sharanya N (PES2UG24AM150) | Repository understanding, detection and evaluation fixtures | 1/3 |
-| Ragul Rajkumar (PES2UG24AM128) | Local LLM repair, validation and human approval safeguards | 1/3 |
-| Arun Hariharan (PES2UG24AM126) | IDE frontend, side chat, application orchestration and delivery | 1/3 |
+| Arun Hariharan (PES2UG24AM126) | Local LLM repair, validation and human approval safeguards | 1/3 |
+| Ragul Rajkumar (PES2UG24AM128) | IDE frontend, side chat, application orchestration and delivery | 1/3 |
 
 ## Sharanya: analysis and detection
 
@@ -46,7 +46,7 @@ and `PROGRESS.md`; workspace/retrieval/detection decisions in `DECISIONS.md`.
 Demo cases: unsafe settings evaluation and SQL interpolation. Show the original
 code, why it is flagged, and examples the current detector misses.
 
-## Ragul: model, repair and validation
+## Arun: model, repair and validation
 
 Six responsibility blocks:
 
@@ -78,7 +78,7 @@ and the model/validation/HIL sections of the shared documentation.
 Demo cases: path traversal and pricing refactoring. Explain how a candidate is
 generated and why passing a simple static rule alone is insufficient to accept it.
 
-## Arun: IDE, side chat and application
+## Ragul: IDE, side chat and application
 
 Six responsibility blocks:
 
@@ -91,7 +91,7 @@ Six responsibility blocks:
    inspection and clear separation of Ask, Propose, Apply and Reject.
 4. Local application: HTTP routes, loopback/host/origin/action-token checks,
    request bounds, controller state, worker threads and operation serialization.
-   Integrate Ragul's model and approval functions without bypassing their gates.
+   Integrate Arun's model and approval functions without bypassing their gates.
 5. Demo lifecycle: launcher/CLI commands, pristine reset behavior, pending-review
    invalidation, application state, event delivery and result-history integration.
 6. Delivery and walkthrough: desktop browser verification, screenshots, packaging,
@@ -101,7 +101,7 @@ Primary files: `peogai/frontend/*`, `peogai/server.py`, `peogai/demo.py`,
 `peogai/cli.py`, `peogai/__main__.py`, `run_demo.py`, `pyproject.toml` and `.gitignore`.
 
 Primary fixture ownership: `notifications-lib` and `shop-service`. Coordinate
-`shop-service` integration tests with Sharanya and Ragul, who own the relevant
+`shop-service` integration tests with Sharanya and Arun, who own the relevant
 upstream contracts.
 
 Testing/documentation ownership: `tests/test_chat.py`, `tests/test_server.py`,
@@ -115,18 +115,18 @@ side-chat request, the proposed patch, explicit approval/rejection, and clean re
 
 | Handoff | Producer | Consumer | Required contract |
 | --- | --- | --- | --- |
-| Findings and retrieved context | Sharanya | Ragul | Stable issue IDs, file/line/rule, editable function and relevant tests |
-| Validated proposal and evidence | Ragul | Arun | Diagnosis, diff, risk, executed checks and a review-bound candidate |
-| User question or repair request | Arun | Ragul | Selected-file context, explicit request and no implicit application |
-| Human decision | Arun | Ragul | Exact pending review ID and optional reason; backend enforces freshness |
+| Findings and retrieved context | Sharanya | Arun | Stable issue IDs, file/line/rule, editable function and relevant tests |
+| Validated proposal and evidence | Arun | Ragul | Diagnosis, diff, risk, executed checks and a review-bound candidate |
+| User question or repair request | Ragul | Arun | Selected-file context, explicit request and no implicit application |
+| Human decision | Ragul | Arun | Exact pending review ID and optional reason; backend enforces freshness |
 | Demo fixtures and downstream tests | All three, two repos each | Entire pipeline | Reproducible reset and 25-test contract suite |
 
-Every owner maintains the tests and documentation for their module. Arun
-assembles the shared documents; Sharanya and Ragul supply and check their sections.
+Every owner maintains the tests and documentation for their module. Ragul
+assembles the shared documents; Sharanya and Arun supply and check their sections.
 All three participate in integration, review and the final rehearsal equally.
 
-Cross-review rotation: Sharanya reviews Ragul's changes, Ragul reviews Arun's
-changes, and Arun reviews Sharanya's changes. Changes spanning modules receive
+Cross-review rotation: Sharanya reviews Arun's changes, Arun reviews Ragul's
+changes, and Ragul reviews Sharanya's changes. Changes spanning modules receive
 review from both affected owners.
 
 ## Equal presentation and demonstration split
@@ -136,8 +136,8 @@ For a 12-minute presentation, allocate approximately four minutes each:
 | Speaker | Explain | Show |
 | --- | --- | --- |
 | Sharanya | Problem, repo graph, detection and honest coverage limits | Findings, source locations, six planted cases and the independent audit |
-| Ragul | Ollama prompting, constrained repairs, validation and approval safeguards | Candidate explanation, security-test evidence, scope/signature gates and stale-review protection |
-| Arun | IDE integration, side chat, HIL interaction and reproducibility | Ask/Propose in chat, inspect diff, Apply/Reject, result journal and reset |
+| Arun | Ollama prompting, constrained repairs, validation and approval safeguards | Candidate explanation, security-test evidence, scope/signature gates and stale-review protection |
+| Ragul | IDE integration, side chat, HIL interaction and reproducibility | Ask/Propose in chat, inspect diff, Apply/Reject, result journal and reset |
 
 Each teammate should be able to trace one issue through the whole system, while
 leading the explanation of their own module. The six demo cases are allocated
