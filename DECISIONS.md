@@ -149,3 +149,24 @@ and decorators, enforce AST scope and size, and run all validation gates. Supply
 existing imports and the editable function instead of repeating the whole target
 file. The model still generates the actual fix and explanation; no canned fix
 is applied by the host. Rule-specific guidance remains explicit in model.py.
+
+## 018 - IDE workspace and side chat (16 Nov)
+
+Replace the presentation dashboard with a buildless IDE layout: repo explorer,
+file search/tabs, a read-only source/diff editor, bottom Problems/Validation/
+Pipeline panels, and an AI Assistant side chat. Keep Python as the only runtime.
+Use safe DOM text nodes for syntax coloring and a small Markdown-like renderer;
+model HTML is never interpreted. No external fonts, packages or CDNs.
+
+Separate Ask (read-only explanation) from Propose fix (validated repair). Questions
+include the selected source, findings, limited conversation, dependency metadata
+and pending-review evidence. They cannot execute tools, approve or apply changes.
+Proposal requests carry the operator's constraints into retrieved context. A chat
+worker holds the existing operation lock, preserving a pending review while
+blocking simultaneous reset/apply/generation. Recover cleanly from model errors.
+
+Keep backend review-ID/fingerprint approval unchanged. The UI additionally
+requires the exact pending file AND issue to be displayed in diff mode before
+Apply is enabled, including files containing multiple findings. Rejection remains
+available without applying. Source is not an editable buffer. Chat is session
+state; existing human decision audit records remain persistent across resets.

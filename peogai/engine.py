@@ -122,7 +122,8 @@ def scope_check(before: str, after: str, issue: Issue) -> None:
 
 
 def repair(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool,
-           generator: Callable[..., Proposal] = propose, emit: EventSink | None = None) -> Path:
+           generator: Callable[..., Proposal] = propose, emit: EventSink | None = None,
+           reviewer_request: str = "") -> Path:
     started = time.monotonic()
     def event(kind: str, **data: Any) -> None:
         if emit is not None:
@@ -142,6 +143,8 @@ def repair(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool
     event("baseline", issue=asdict(issue), checks=[asdict(c) for c in baseline_checks])
     source = resolve(baseline, issue.path).read_text(encoding="utf-8")
     ctx = context(baseline, issue)
+    if reviewer_request:
+        ctx["reviewer_request"] = reviewer_request[:2000]
     (run / "context.json").write_text(json.dumps(ctx, indent=2), encoding="utf-8")
     event("context", issue=asdict(issue), files=list(ctx["related_files"]), symbol=ctx["editable_symbol"])
     report: dict[str, Any] = {"issue": asdict(issue), "model": model, "status": "rejected",

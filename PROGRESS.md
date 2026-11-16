@@ -2,7 +2,7 @@
 
 Updated: 16 November 2026 (Asia/Calcutta).
 
-## Completion: 100% of the human-in-the-loop demo MVP
+## Completion: 100% of the human-in-the-loop IDE demo MVP
 
 This replaces the earlier auto-apply demo scope. Percentage is the sum of
 completed weights, not progress toward every research objective in the PDF.
@@ -12,11 +12,29 @@ completed weights, not progress toward every research objective in the PDF.
 | Typed local agent, AST detection, retrieval and candidate validation | 35% | Complete | Five rule types; scope and regression gates |
 | Six repositories, six findings, 25 cross-repo tests | 15% | Complete | Baseline: 22 passing tests, 3 intentional failures |
 | Backend human approval, rejection, freshness checks and audit | 25% | Complete | Explicit decisions only; no generation-time application |
-| Frontend diagnosis, highlighted code, diff and review controls | 10% | Complete | Real browser proposal and rejection verified |
+| IDE frontend, read-only AI chat, highlighted code, diff and review controls | 10% | Complete | Real Ollama question, proposal and browser rejection verified |
 | Documentation and walkthrough | 5% | Complete | README and decision records updated |
-| Final regression and real-model/browser verification | 10% | Complete | 17/17 agent tests; six real model fixes; 25/25 final repo tests |
+| Final regression and real-model/browser verification | 10% | Complete | 20/20 agent tests; IDE question/proposal verified; earlier six-fix run passed 25 repo tests |
 
 ## Current verification
+
+- 16 Nov IDE update: explorer, file tabs/search, read-only syntax-colored editor,
+  source/diff modes, wrapping, bottom Problems/Validation/Pipeline panels and an
+  AI side chat. Typed questions call Ollama without edit authority; Propose fix
+  forwards the operator's constraints into the existing validated repair flow.
+- Full suite: 20/20 tests passed in 47.753 seconds. Added tests cover selected-file
+  question context, pending-review preservation, request forwarding, concurrency,
+  error recovery and HTTP chat routing. Affected chat/API tests passed again after
+  context refinements. Python and JavaScript syntax checks pass.
+- Browser check used an isolated copy of the current live workspace. Real model
+  question response: 25.621 seconds; SQL proposal preparation: 12.890 seconds,
+  with 11 passing gates and 1 disclosed unrelated baseline-failure repo.
+- Verified file search/tabs, original highlights, wrapped diff, validation panel,
+  Apply disabled outside the pending patch view, and rejection with no application.
+  Live workspace fingerprint stayed unchanged. Evidence: docs/ide-workspace.png
+  and docs/ide-verification-summary.json. The temporary preview was stopped.
+- Source viewing is read-only, not a general code-editing IDE. Desktop layout
+  was visually verified; mobile viewport and static type checking were not run.
 
 - 16 Nov detection audit: all 6 planted findings at the expected file/line/rule,
   with no additional findings in the pristine demo. This does not establish
@@ -76,3 +94,5 @@ and mobile viewport testing have not been performed.
   unrelated baseline failures instead of blocking all independent proposals.
 - 13 Nov: Passed final real-model, deterministic and browser checks. HIL demo
   completion updated to 100%; previous auto-apply behavior is superseded.
+- 16 Nov: Audited detector limits, then replaced the dashboard with an IDE-style
+  workspace and real model side chat. HIL gates and existing user source preserved.

@@ -22,7 +22,7 @@ class ServerTests(unittest.TestCase):
             root = Path(temp)
             snapshot(PROJECT / "fixtures/demo", root / "fixtures/demo")
             reset_demo(root)
-            controller = DemoController("fake", 1, root)
+            controller = DemoController("fake", 1, root, chatter=lambda *_: "Read-only explanation")
             server = make_server(controller, 0)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
@@ -39,6 +39,16 @@ class ServerTests(unittest.TestCase):
                 with self.assertRaises(urllib.error.HTTPError) as error:
                     opener.open(request)
                 self.assertEqual(error.exception.code, 403)
+                chat = urllib.request.Request(url + "/api/chat", method="POST", headers={
+                    "X-Demo-Token": state["token"]}, data=json.dumps({
+                        "path": "repos/settings-lib/settings_lib.py", "message": "Explain this"}).encode())
+                with opener.open(chat) as response:
+                    self.assertEqual(response.status, 202)
+                import time
+                deadline = time.monotonic() + 5
+                while controller.snapshot()["chat_busy"] and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertFalse(controller.snapshot()["chat_busy"])
                 stale = urllib.request.Request(url + "/api/approve", method="POST", headers={
                     "X-Demo-Token": state["token"]}, data=b'{"review_id":"stale"}')
                 with self.assertRaises(urllib.error.HTTPError) as error:

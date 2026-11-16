@@ -42,9 +42,10 @@ class Review:
 
 
 def prepare(root: Path, issue_id: str, model: str, attempts: int, run_tests: bool,
-            emit: EventSink, generator: Callable[..., Proposal] = propose) -> Review | None:
+            emit: EventSink, generator: Callable[..., Proposal] = propose,
+            reviewer_request: str = "") -> Review | None:
     original_hash = fingerprint(root)
-    run = repair(root, issue_id, model, attempts, run_tests, generator, emit)
+    run = repair(root, issue_id, model, attempts, run_tests, generator, emit, reviewer_request)
     report = json.loads((run / "report.json").read_text(encoding="utf-8"))
     if report["status"] != "validated":
         return None

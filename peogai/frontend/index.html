@@ -1,13 +1,61 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PEOGAI · Repair lab</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PEOGAI — local workspace</title>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
 <body>
-<header><a class="brand" href="/">P<span>▧</span> / PEOGAI</a><span class="local"><i></i> LOCAL REPAIR LAB</span><span id="model" class="model"></span></header>
-<main>
-  <section class="hero"><div><p class="eyebrow">REPOSITORY EXPERIMENT / 001</p><h1>Watch a patch<br>earn its place.</h1><p class="intro">Six repos. Six planted issues. You approve every fix.<br>Understand the failure. Inspect the patch. Decide what changes.</p></div><div class="launch"><span class="tag" id="status">READY</span><h2 id="headline">A clean starting point.</h2><p>Reset, investigate, and validate a proposal. Files change only after your explicit approval.</p><div class="buttons"><button id="run">Reset & investigate <span>↗</span></button><button id="reset" class="secondary">Reset only</button></div><p class="hint">Real Ollama responses · no scripted fixes</p><p id="error" role="alert"></p></div></section>
-  <section class="stats" aria-label="Run metrics"><div><span id="repos-count">06</span><p>CONNECTED REPOS</p></div><div><span id="remaining">06</span><p>OPEN FINDINGS</p></div><div><span id="fixed">00</span><p>HUMAN-APPROVED FIXES</p></div><div><span id="elapsed">—</span><p>SESSION SECONDS</p></div></section>
-  <section class="workspace"><aside><div class="section-title"><h2>01 / Workspace</h2><span>LIVE FILES</span></div><div id="graph" class="graph"></div><h3 class="small-label">SOURCE EXPLORER</h3><div id="files" class="files"></div><details class="prompt"><summary>Inspect system prompt ↗</summary><pre id="prompt"></pre></details></aside><div class="inspection"><div class="section-title"><h2>02 / Patch inspector</h2><span id="phase">AWAITING RUN</span></div><div id="issue-tabs" class="tabs"></div><section class="diagnosis"><h3>What is wrong?</h3><p id="diagnosis">Select an issue to inspect the detected problem.</p><p id="location" class="small-label"></p><pre id="problem-code" class="problem-code"></pre><p id="affected" class="empty"></p></section><h3 class="review-heading">Proposed fix</h3><p id="explanation" class="explanation">Choose an issue, then ask the AI to explain and propose a fix.</p><p id="risk" class="risk"></p><p id="verification" class="empty"></p><div class="review-actions"><button id="prepare">Explain & propose fix</button></div><section id="review-panel" class="review-panel" hidden><strong>Human decision required</strong><p>This exact patch has passed the validation gates below. Your workspace is still unchanged. Existing unrelated test failures are disclosed.</p><label for="reason">Review note (optional)</label><textarea id="reason" rows="2" maxlength="2000" placeholder="Why are you approving or rejecting this proposal?"></textarea><div class="buttons"><button id="approve">Apply this fix</button><button id="reject" class="secondary">Reject proposal</button></div><p id="review-id" class="hint"></p></section><div class="view-tabs"><button data-mode="diff" class="selected">Unified diff</button><button data-mode="source">Current source</button><span id="filename"></span></div><pre id="code" class="code" tabindex="0"></pre><div class="section-title checks-title"><h2>Validation evidence</h2><span>ALL REPOS</span></div><div id="checks" class="checks"><p class="empty">Syntax, security rules, scope, and cross-repo tests appear here.</p></div></div></section>
-  <section class="activity"><div class="section-title"><h2>03 / Run journal</h2><span id="event-count">0 EVENTS</span></div><ol id="timeline" aria-live="polite"><li class="empty">Ready to begin. Each real pipeline event will be recorded here.</li></ol></section>
-  <footer><span>PEOGAI / LOCAL FIRST</span><span>Validated against these tests. Reviewed by you.</span></footer>
-</main>
-</body></html>
+  <header class="titlebar">
+    <a class="brand" href="/" aria-label="PEOGAI workspace"><span class="brand-mark">P</span> PEOGAI <span class="brand-caption">/ repair studio</span></a>
+    <label class="quick-open"><span>⌕</span><input id="search" type="search" placeholder="Find a file in parcel-shop…" aria-label="Find a file"><kbd>Ctrl P</kbd></label>
+    <span class="local-indicator"><i></i> LOCAL</span>
+    <button id="reset" class="quiet" title="Restore all demo files from pristine fixtures">↺ Reset demo</button>
+  </header>
+  <main class="ide">
+    <nav class="activitybar" aria-label="Workspace panels">
+      <button id="toggle-explorer" class="activity active" aria-label="Toggle file explorer" title="Explorer"><svg viewBox="0 0 24 24"><path d="M8 3h11v15H8zM5 6H3v15h12v-2"/></svg></button>
+      <button id="show-problems" class="activity" aria-label="Show problems" title="Problems"><svg viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v5m0 3v1"/></svg><span id="rail-count" class="rail-badge">6</span></button>
+      <button id="show-ai" class="activity" aria-label="Focus AI chat" title="AI chat"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4zM8 8h8M8 12h5"/></svg></button>
+      <span class="rail-spacer"></span><span class="rail-bottom" title="Local workspace">⌘</span>
+    </nav>
+    <aside class="explorer" id="explorer" aria-label="File explorer">
+      <div class="panel-heading"><h1>EXPLORER</h1><span id="repos-count">6 repos</span></div>
+      <div class="workspace-name"><span>⌄</span> PARCEL-SHOP <span class="workspace-dot"></span></div>
+      <div id="file-tree" class="file-tree"></div>
+      <div class="explorer-note"><span class="note-label">LOCAL PLAYGROUND</span><p>Independent repos.<br>Connected contracts.</p><div id="dependencies"></div></div>
+    </aside>
+    <section class="editor-workbench" aria-label="Code workspace">
+      <div id="editor-tabs" class="editor-tabs" role="tablist" aria-label="Open files"></div>
+      <div class="editor-toolbar"><div id="breadcrumb" class="breadcrumb"></div><div class="mode-switch" aria-label="Patch inspector"><button id="wrap" class="selected" aria-pressed="true" title="Toggle editor line wrapping">Wrap</button><button data-mode="source" class="selected">Source</button><button data-mode="diff">Review diff <span id="diff-dot" hidden>●</span></button></div></div>
+      <div id="finding-banner" class="finding-banner" hidden><span class="finding-mark">!</span><div><strong id="finding-title"></strong><span id="finding-summary"></span></div><button id="investigate" class="text-button">Ask AI ↗</button></div>
+      <div id="editor" class="editor-scroll wrapped" tabindex="0" role="region" aria-label="Read-only source editor"><div id="code" class="code"></div></div>
+      <div class="editor-caption"><span id="file-state">Read-only workspace source</span><span>Python <span class="caption-dot">·</span> UTF-8 <span class="caption-dot">·</span> 4 spaces</span></div>
+      <section class="bottom-panel" aria-label="Problems and validation">
+        <div class="bottom-tabs"><button data-panel="problems" class="selected">Problems <span id="problem-count" class="count">6</span></button><button data-panel="validation">Validation <span id="validation-count" class="count">0</span></button><button data-panel="pipeline">Pipeline</button><span id="panel-summary"></span></div>
+        <div id="problems" class="bottom-content"></div><div id="checks" class="bottom-content" hidden></div><div id="timeline" class="bottom-content" hidden></div>
+      </section>
+    </section>
+    <aside class="ai-panel" aria-label="AI side chat">
+      <div class="chat-heading"><div class="assistant-title"><span class="spark">✧</span><h2>AI Assistant</h2></div><span class="approval-pill">HUMAN REVIEW</span></div>
+      <div class="model-strip"><i></i><span id="model">Connecting to workspace…</span><button id="prompt-toggle" class="icon-button" title="Inspect repair system prompt" aria-label="Inspect system prompt">⌘</button></div>
+      <div id="chat-messages" class="chat-messages" role="log" aria-label="Conversation" aria-live="polite"></div>
+      <section id="review-panel" class="review-card" hidden aria-label="Pending patch approval">
+        <div class="review-card-title"><span>◇</span><strong>Your approval is required</strong></div><p id="review-context"></p>
+        <button id="review-diff" class="text-button">Open the validated diff ↗</button>
+        <label class="sr-only" for="reason">Review note</label><input id="reason" maxlength="2000" placeholder="Review note (optional)">
+        <div class="decision-buttons"><button id="approve" class="primary">Apply fix</button><button id="reject" class="secondary">Reject</button></div><small id="review-hint"></small>
+      </section>
+      <form id="chat-form" class="composer">
+        <div class="context-chip"><span class="python-icon">py</span><span id="chat-context">Select a file</span><span class="context-label">CONTEXT</span></div>
+        <label class="sr-only" for="message">Message the local AI</label><textarea id="message" rows="3" maxlength="2000" placeholder="Ask about this code, or describe the fix you want…"></textarea>
+        <div class="composer-actions"><span id="chat-state"><i></i> Read-only questions</span><button id="ask" class="secondary" type="submit" title="Ask a read-only question">Ask ↗</button><button id="prepare" class="primary" type="button" title="Generate and validate a fix for the selected finding">Propose fix</button></div>
+      </form>
+      <div id="error" class="error" role="alert" hidden></div>
+      <div class="chat-footer">Local model. Your code stays here. You decide what changes.</div>
+    </aside>
+  </main>
+  <footer class="statusbar"><span><i></i> parcel-shop</span><span id="status">Connecting</span><span id="remaining">6 findings</span><span id="fixed">0 applied</span><span class="status-spacer"></span><span>AST rules + local Ollama</span><span class="hil-status">Approval required before apply</span></footer>
+  <dialog id="prompt-dialog"><div class="dialog-heading"><h2>Repair system prompt</h2><button id="prompt-close" class="quiet">Close ×</button></div><p>The exact system prompt used to propose repairs. Read-only chat uses a separate explanation-only prompt.</p><pre id="prompt"></pre></dialog>
+</body>
+</html>

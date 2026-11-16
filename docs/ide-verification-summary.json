@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-16",
+  "model": "qwen2.5-coder:7b",
+  "real_read_only_chat_reply": true,
+  "chat_seconds": 25.621,
+  "proposal_seconds": 12.89,
+  "pending_review": true,
+  "findings": 5,
+  "applied_events": 0,
+  "gates": 11,
+  "baseline_failure_repos": 1,
+  "preview_uses_isolated_copy": true,
+  "rejection_verified": true,
+  "final_applied_events": 0,
+  "live_workspace_preserved": true,
+  "automated_tests_passed": 20,
+  "desktop_browser_verified": true,
+  "mobile_viewport_verified": false
+}

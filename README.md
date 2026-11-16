@@ -1,6 +1,6 @@
 # PEOGAI: human-in-the-loop repair lab
 
-A local, typed Python agent with Ollama, a browser dashboard, six connected
+A local, typed Python agent with Ollama, an IDE-style browser workspace, six connected
 pretend repositories, six planted findings, and 25 cross-repository tests.
 The model proposes and explains a fix. You decide whether it is applied.
 No cloud model, database, frontend build step, or runtime Python packages.
@@ -25,26 +25,39 @@ Your installed model is qwen2.5-coder:7b. If absent on another machine, first ru
 `ollama pull qwen2.5-coder:7b`. The script does not start Ollama or download models.
 It resets demo/, opens [the dashboard](http://127.0.0.1:8765), and investigates the
 first issue. It stops at **Awaiting human review**. No proposed fix is applied
-until you explicitly choose **Apply this fix**.
+until you explicitly choose **Apply fix**. Use `--no-autostart` to open the IDE
+and invoke the model yourself from side chat.
 
 ## Human review walkthrough
 
-1. Select a finding. The original problematic code is highlighted with line numbers.
-2. Click **Explain & propose fix**. Ollama returns a diagnosis, a proposed change,
-   residual risks, and a verification plan. Tests run on a separate candidate copy.
-3. Inspect the diff, affected repos, and actual validation evidence. AI statements
-   about tests are labeled as a plan; executed results are listed separately.
-4. Choose **Apply this fix** or **Reject proposal**, optionally recording a note.
+1. Open a file in the left Explorer or select a finding in the bottom Problems
+   panel. The central read-only editor shows line numbers, syntax colors and
+   problem highlights. Use file tabs, Ctrl+P file search, and Wrap as needed.
+2. Type a question in the right AI Assistant panel and choose **Ask** (or
+   Ctrl+Enter). This invokes Ollama with the selected file as context. Questions
+   are read-only, including follow-up questions while a review is pending.
+3. Select a current finding, describe any constraints in chat, and choose
+   **Propose fix**. The model's diagnosis, change, risks and verification plan
+   appear as chat messages. Tests run in a separate candidate copy.
+4. Open **Review diff** in the editor and **Validation** below it. Actual executed
+   evidence is distinct from the model's suggested verification. Opening the
+   pending patch's validated diff enables **Apply fix**.
+5. Choose **Apply fix** or **Reject** in the chat review card, optionally recording a note.
    Rejection leaves source unchanged. Approval applies only the exact reviewed bytes.
-5. Pick another finding and repeat. The six changes are separate review decisions.
+6. Pick another finding and repeat. The six changes are separate review decisions.
+
+This is an IDE-style review workspace, not a general-purpose editable IDE. Source
+is read-only; changes go through the proposal and approval flow. Chat history is
+kept in the current server session and clears on reset. Read-only answers cannot
+execute commands or apply changes. Markdown-like output is rendered with safe
+text nodes; model HTML is never executed.
 
 The proposal is bound to an opaque review ID and the whole workspace fingerprint.
 Missing, old, or duplicate approval IDs are rejected. If any workspace file changes
 while you review, application is blocked: reject and generate a fresh proposal.
 Reset invalidates the pending review. One proposal may be pending at a time.
 
-**Reset & investigate** restores all fixtures before generating the first proposal.
-**Reset only** restores the baseline without calling the model. Every launcher
+The top **Reset demo** action restores the baseline without calling the model. Every launcher
 start restores demo/. Its generated files and per-attempt reports are disposable;
 keep your own work outside it. fixtures/demo/ remains the canonical baseline.
 Run one demo process at a time. Ctrl+C stops the dashboard server.

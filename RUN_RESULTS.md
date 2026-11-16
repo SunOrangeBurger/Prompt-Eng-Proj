@@ -1,5 +1,43 @@
 # Run results
 
+## IDE frontend and model side chat: 16 November 2026
+
+Replaced the dashboard with a local IDE-style workspace. Verified in an isolated
+copy of the current live demo, preserving its existing invoice path fix.
+
+| Check | Result |
+| --- | --- |
+| Full automated suite | 20/20 passed in 47.753 s |
+| New/affected chat and HTTP tests after context refinements | 4/4 passed |
+| Actual read-only Ollama question from side chat | Reply received in 25.621 s |
+| SQL proposal from typed side-chat constraints | Validated in 12.890 s |
+| Candidate gates | 11 passed; 1 unrelated baseline-failure repo disclosed |
+| File search, file tabs, problem highlights and wrapped diff | Desktop browser verified |
+| Approval view guard | Apply disabled outside the pending patch's diff |
+| Rejection from side chat | Source unchanged; zero applied events |
+| Original live workspace | Full source fingerprint unchanged |
+| Node syntax / Python compilation | Passed |
+
+The operator asked why the SQL query was unsafe, then requested parameter binding
+while preserving the signature and valid lookups. Real model messages appeared
+in the AI pane; the actual patch appeared in the central editor. Browser checks
+also covered file filtering/opening tabs and the bottom validation panel. The
+candidate was rejected with an explicit verification note. No fix was applied to
+the live workspace or to the preview copy during this check.
+
+The added automated tests verify selected-source chat context, read-only behavior,
+forwarding of typed proposal constraints, follow-up chat preserving a pending
+review, operation serialization, error recovery and chat endpoint routing.
+Read-only answers and proposal generation remain separate operations. The host
+anchors, validates and gates any proposed source change as before.
+
+Evidence: docs/ide-workspace.png and docs/ide-verification-summary.json. The preview
+server was stopped. Ollama was already running; the attempted temporary server
+exited because its port was occupied, and the pre-existing service was left alone.
+Mobile viewport and static type checking were not verified. Detector behavior and
+the limitations recorded in the detection audit below are unchanged.
+
+
 ## Detection audit: 16 November 2026
 
 Executed python scripts/verify_detection.py without resetting or changing the

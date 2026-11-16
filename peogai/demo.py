@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .model import propose
+from .model import answer, propose
 from .review import Review, decide, prepare
 from .types import EventSink, Proposal
 from .workspace import files, is_link, load, resolve, scan, snapshot
@@ -97,15 +97,17 @@ def run_demo(model: str, attempts: int, run_tests: bool, emit: EventSink,
 
 class DemoController:
     def __init__(self, model: str, attempts: int, project: Path = PROJECT,
-                 generator: Callable[..., Proposal] = propose):
+                 generator: Callable[..., Proposal] = propose,
+                 chatter: Callable[..., str] = answer):
         self.model = model
         self.attempts = attempts
         self.project = project
         self.generator = generator
+        self.chatter = chatter
         self.pending: Review | None = None
         self.lock = threading.Lock()
         self.state: dict[str, Any] = {"status": "ready", "model": model, "events": [],
-                                     "pending": None, **view(project / "fixtures/demo")}
+                                     "pending": None, "chat_busy": False, **view(project / "fixtures/demo")}
 
     def emit(self, kind: str, data: dict[str, Any]) -> None:
         with self.lock:
@@ -123,7 +125,7 @@ class DemoController:
         with self.lock:
             return json.loads(json.dumps(self.state))
 
-    def start(self, issue_id: str | None = None, reset: bool = True) -> bool:
+    def start(self, issue_id: str | None = None, reset: bool = True, request: str = "") -> bool:
         if not DEMO_LOCK.acquire(blocking=False):
             return False
         with self.lock:
@@ -144,7 +146,10 @@ class DemoController:
                 if selected is None:
                     raise ValueError("Choose a current issue")
                 self.emit("issue_started", {"issue": asdict(selected)})
-                review = prepare(root, selected.id, self.model, self.attempts, True, self.emit, self.generator)
+                self.emit("user_message", {"text": request or "Explain this finding and propose a minimal fix.",
+                                           "path": selected.path, "issue_id": selected.id, "mode": "propose",
+                                           "origin": "user" if request else "demo"})
+                review = prepare(root, selected.id, self.model, self.attempts, True, self.emit, self.generator, request)
                 with self.lock:
                     self.pending = review
                     self.state["pending"] = review.payload if review else None
@@ -156,6 +161,45 @@ class DemoController:
                 with self.lock:
                     self.state["status"] = "error"
             finally:
+                DEMO_LOCK.release()
+        threading.Thread(target=worker, daemon=True).start()
+        return True
+
+    def ask(self, path: str, message: str) -> bool:
+        if not isinstance(message, str) or not 1 <= len(message.strip()) <= 2000:
+            raise ValueError("Write a question of 1-2000 characters")
+        if not DEMO_LOCK.acquire(blocking=False):
+            return False
+        with self.lock:
+            if path not in self.state["sources"]:
+                DEMO_LOCK.release()
+                raise ValueError("Select a workspace file")
+            self.state["chat_busy"] = True
+            history = [{"kind": e["kind"], "text": e.get("text", "")[:2000]}
+                       for e in self.state["events"] if e["kind"] in {"user_message", "assistant_message"}
+                       and e.get("path") == path][-6:]
+            payload = self.pending.payload if self.pending and self.pending.path == path else None
+            pending = ({k: payload[k] for k in ("diagnosis", "explanation", "risk", "verification")}
+                       | {"diff": payload["diff"][:8000],
+                          "checks": [{"name": c["name"], "passed": c["passed"],
+                                      "baseline_failures": c.get("baseline_failures", False),
+                                      "output": c["output"][:400]} for c in payload["checks"]]}) if payload else None
+            context = {"path": path, "source": self.state["sources"][path][:12_000],
+                       "issues": [i for i in self.state["issues"] if i["path"] == path],
+                       "pending_review": pending, "conversation": history, "repo_graph": self.state["repos"],
+                       "recent_decisions": [{"decision": e["decision"], "reason": e.get("reason", "")[:1000]}
+                                            for e in self.state["events"] if e["kind"] == "human_decision"
+                                            and e.get("issue", {}).get("path") == path][-3:]}
+        self.emit("user_message", {"text": message.strip(), "path": path, "mode": "ask"})
+        def worker() -> None:
+            try:
+                response = self.chatter(message.strip(), context, self.model)
+                self.emit("assistant_message", {"text": response, "path": path})
+            except Exception as exc:
+                self.emit("chat_error", {"message": str(exc), "path": path})
+            finally:
+                with self.lock:
+                    self.state["chat_busy"] = False
                 DEMO_LOCK.release()
         threading.Thread(target=worker, daemon=True).start()
         return True

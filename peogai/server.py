@@ -58,7 +58,7 @@ def make_server(controller: DemoController, port: int) -> ThreadingHTTPServer:
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 <= size <= 4096:
+                if not 0 <= size <= 16_384:
                     raise ValueError("Request is too large")
                 data = json.loads(self.rfile.read(size)) if size else {}
                 if not isinstance(data, dict):
@@ -70,10 +70,23 @@ def make_server(controller: DemoController, port: int) -> ThreadingHTTPServer:
                 self.json(202 if controller.start() else 409, {"status": controller.snapshot()["status"]})
             elif self.path == "/api/prepare":
                 issue_id = data.get("issue_id")
+                request = data.get("message", "")
+                if not isinstance(request, str) or len(request) > 2000:
+                    self.json(400, {"error": "Review request must be at most 2000 characters"})
+                    return
                 if not isinstance(issue_id, str) or not any(i["id"] == issue_id for i in controller.snapshot()["issues"]):
                     self.json(400, {"error": "Choose a current issue"})
                     return
-                self.json(202 if controller.start(issue_id, reset=False) else 409, {"status": controller.snapshot()["status"]})
+                self.json(202 if controller.start(issue_id, reset=False, request=request) else 409, {"status": controller.snapshot()["status"]})
+            elif self.path == "/api/chat":
+                try:
+                    path, message = data.get("path"), data.get("message")
+                    if not isinstance(path, str) or not isinstance(message, str):
+                        raise ValueError("Select a file and write a question")
+                    accepted = controller.ask(path, message)
+                    self.json(202 if accepted else 409, {"accepted": accepted})
+                except ValueError as exc:
+                    self.json(400, {"error": str(exc)})
             elif self.path in {"/api/approve", "/api/reject"}:
                 try:
                     if not isinstance(data.get("review_id"), str) or not isinstance(data.get("reason", ""), str):
