@@ -66,6 +66,15 @@ rejections, and downstream checks. They are not a general repair benchmark.
 
 ## Validation with multiple known failures
 
+Detection audit (16 Nov): the scanner finds all six planted patterns, but only
+10 of 24 independent curated probes matched expectations (9 missed detections
+and 5 false positives). Discovery uses five handwritten AST rules; Ollama does
+not independently discover all repository errors. Aliases, variable-built SQL
+and incomplete path guards expose gaps. Syntax errors abort scanning and files
+over 64 KB are skipped. Run `python scripts/verify_detection.py` and inspect
+docs/detection-audit.json for the exact cases. These probes are not a
+representative benchmark or a general accuracy estimate.
+
 The baseline has 25 tests: 22 pass and 3 intentionally fail for the security
 issues. A proposal must remove its finding, pass its targeted security regression
 (where applicable), preserve all previously passing tests, preserve the complete

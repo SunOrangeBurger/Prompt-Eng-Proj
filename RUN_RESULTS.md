@@ -1,5 +1,35 @@
 # Run results
 
+## Detection audit: 16 November 2026
+
+Executed python scripts/verify_detection.py without resetting or changing the
+live workspace. Detection is deterministic AST pattern matching; the model
+explains and proposes repairs after detection.
+
+| Verification | Observed result |
+| --- | --- |
+| Independently specified pristine file/line/rule ground truth | 6/6 found; 0 extras |
+| Independent curated challenge cases | 10/24 matched expected results |
+| Missed-detection challenge cases | 9 |
+| False-positive challenge cases | 5 |
+| Pristine repository tests | 22/25 pass; 3 deliberate security failures |
+| Current live repository tests | 23/25 pass; SQL and eval security tests still fail |
+| Current live scan | 5 findings; invoice path fix already present |
+| Existing live invoice-reader edit | Preserved; source digest unchanged by audit |
+
+Misses include qualified/aliased eval, concatenated/variable/formatted SQL,
+path construction via variables or aliases, lexical guards without resolution,
+and unused containment checks. False positives include shadowed safe eval,
+constant SQL f-strings, non-SQL execute APIs, fixed trusted file paths, and a
+custom container whose bool and len intentionally differ.
+
+Also confirmed that oversized Python sources are silently skipped, and one
+syntax error aborts a scan. This is a narrow HIL demonstration detector, not
+complete error discovery. The curated cases are diagnostic probes, not a
+representative accuracy benchmark. No detector implementation was changed in
+this audit. Detailed machine-readable results: docs/detection-audit.json.
+
+
 ## Human-in-the-loop demo: 13 November 2026
 
 This section supersedes the earlier two-issue demo below. Local model:

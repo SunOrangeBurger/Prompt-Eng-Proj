@@ -1,0 +1,345 @@
+{
+  "date": "2026-11-16",
+  "planted_expected": 6,
+  "planted_detected": 6,
+  "planted_missing": [],
+  "planted_extra": [],
+  "challenge_cases": 24,
+  "challenge_matches": 10,
+  "challenge_results": [
+    {
+      "case": "direct eval",
+      "expected": [
+        "unsafe-eval"
+      ],
+      "actual": [
+        "unsafe-eval"
+      ],
+      "matches": true
+    },
+    {
+      "case": "qualified builtin eval",
+      "expected": [
+        "unsafe-eval"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "aliased eval",
+      "expected": [
+        "unsafe-eval"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "shadowed safe eval",
+      "expected": [],
+      "actual": [
+        "unsafe-eval"
+      ],
+      "matches": false
+    },
+    {
+      "case": "literal eval",
+      "expected": [],
+      "actual": [],
+      "matches": true
+    },
+    {
+      "case": "comment and string",
+      "expected": [],
+      "actual": [],
+      "matches": true
+    },
+    {
+      "case": "direct SQL f-string",
+      "expected": [
+        "sql-interpolation"
+      ],
+      "actual": [
+        "sql-interpolation"
+      ],
+      "matches": true
+    },
+    {
+      "case": "concatenated SQL",
+      "expected": [
+        "sql-interpolation"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "SQL in variable",
+      "expected": [
+        "sql-interpolation"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "SQL format",
+      "expected": [
+        "sql-interpolation"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "bound SQL parameters",
+      "expected": [],
+      "actual": [],
+      "matches": true
+    },
+    {
+      "case": "constant SQL f-string",
+      "expected": [],
+      "actual": [
+        "sql-interpolation"
+      ],
+      "matches": false
+    },
+    {
+      "case": "non-SQL execute API",
+      "expected": [],
+      "actual": [
+        "sql-interpolation"
+      ],
+      "matches": false
+    },
+    {
+      "case": "direct unchecked path",
+      "expected": [
+        "unchecked-path"
+      ],
+      "actual": [
+        "unchecked-path"
+      ],
+      "matches": true
+    },
+    {
+      "case": "unchecked path via variable",
+      "expected": [
+        "unchecked-path"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "aliased Path",
+      "expected": [
+        "unchecked-path"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "lexical guard without normalization",
+      "expected": [
+        "unchecked-path"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "unused containment check",
+      "expected": [
+        "unchecked-path"
+      ],
+      "actual": [],
+      "matches": false
+    },
+    {
+      "case": "fixed trusted path",
+      "expected": [],
+      "actual": [
+        "unchecked-path"
+      ],
+      "matches": false
+    },
+    {
+      "case": "resolved and enforced containment",
+      "expected": [],
+      "actual": [],
+      "matches": true
+    },
+    {
+      "case": "boolean branch",
+      "expected": [
+        "redundant-bool"
+      ],
+      "actual": [
+        "redundant-bool"
+      ],
+      "matches": true
+    },
+    {
+      "case": "empty list",
+      "expected": [
+        "empty-list-check"
+      ],
+      "actual": [
+        "empty-list-check"
+      ],
+      "matches": true
+    },
+    {
+      "case": "custom container intentional length check",
+      "expected": [],
+      "actual": [
+        "empty-list-check"
+      ],
+      "matches": false
+    },
+    {
+      "case": "already simplified boolean",
+      "expected": [],
+      "actual": [],
+      "matches": true
+    }
+  ],
+  "live_findings": [
+    {
+      "id": "93cf8a5366",
+      "repo": "records-lib",
+      "path": "repos/records-lib/records_lib.py",
+      "line": 6,
+      "end_line": 6,
+      "kind": "security",
+      "rule": "sql-interpolation",
+      "message": "Interpolating input into SQL can change the query. Bind values with placeholders.",
+      "oracle": "test_sql_injection"
+    },
+    {
+      "id": "777d779295",
+      "repo": "settings-lib",
+      "path": "repos/settings-lib/settings_lib.py",
+      "line": 5,
+      "end_line": 5,
+      "kind": "security",
+      "rule": "unsafe-eval",
+      "message": "eval executes input as code. Use ast.literal_eval for literal data.",
+      "oracle": "test_reject_executable_settings"
+    },
+    {
+      "id": "0bdb9b7b82",
+      "repo": "notifications-lib",
+      "path": "repos/notifications-lib/notifications_lib.py",
+      "line": 6,
+      "end_line": 9,
+      "kind": "refactor",
+      "rule": "redundant-bool",
+      "message": "Replace the if/else returning True/False with return bool(condition).",
+      "oracle": ""
+    },
+    {
+      "id": "c0d0eb303a",
+      "repo": "notifications-lib",
+      "path": "repos/notifications-lib/notifications_lib.py",
+      "line": 13,
+      "end_line": 13,
+      "kind": "refactor",
+      "rule": "empty-list-check",
+      "message": "For this list parameter, replace len(items) == 0 with not items. Preserve the surrounding function.",
+      "oracle": ""
+    },
+    {
+      "id": "ae89bbecc4",
+      "repo": "pricing-lib",
+      "path": "repos/pricing-lib/pricing_lib.py",
+      "line": 5,
+      "end_line": 8,
+      "kind": "refactor",
+      "rule": "redundant-bool",
+      "message": "Replace the if/else returning True/False with return bool(condition).",
+      "oracle": ""
+    }
+  ],
+  "coverage_behavior": {
+    "oversized_source_is_silently_skipped": true,
+    "syntax_error_aborts_scan": true
+  },
+  "live_documents_source_preserved": true,
+  "warning": "Curated probes are not a representative benchmark. Matching all planted patterns does not imply complete error detection.",
+  "missed_detection_cases": 9,
+  "false_positive_cases": 5,
+  "pristine_tests": {
+    "total": 25,
+    "passed": 22,
+    "failed": [
+      "tests:records-lib:test_sql_injection (test_records.RecordsTests.test_sql_injection)",
+      "tests:documents-lib:test_path_traversal (test_documents.DocumentsTests.test_path_traversal)",
+      "tests:shop-service:test_reject_executable_settings (test_shop.ShopTests.test_reject_executable_settings)"
+    ],
+    "checks": [
+      {
+        "name": "syntax",
+        "passed": true
+      },
+      {
+        "name": "tests:settings-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:pricing-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:records-lib",
+        "passed": false
+      },
+      {
+        "name": "tests:documents-lib",
+        "passed": false
+      },
+      {
+        "name": "tests:notifications-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:shop-service",
+        "passed": false
+      }
+    ]
+  },
+  "live_tests": {
+    "total": 25,
+    "passed": 23,
+    "failed": [
+      "tests:records-lib:test_sql_injection (test_records.RecordsTests.test_sql_injection)",
+      "tests:shop-service:test_reject_executable_settings (test_shop.ShopTests.test_reject_executable_settings)"
+    ],
+    "checks": [
+      {
+        "name": "syntax",
+        "passed": true
+      },
+      {
+        "name": "tests:settings-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:pricing-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:records-lib",
+        "passed": false
+      },
+      {
+        "name": "tests:documents-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:notifications-lib",
+        "passed": true
+      },
+      {
+        "name": "tests:shop-service",
+        "passed": false
+      }
+    ]
+  }
+}

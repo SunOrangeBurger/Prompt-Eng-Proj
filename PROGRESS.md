@@ -1,6 +1,6 @@
 # Progress
 
-Updated: 13 November 2026 (Asia/Calcutta).
+Updated: 16 November 2026 (Asia/Calcutta).
 
 ## Completion: 100% of the human-in-the-loop demo MVP
 
@@ -17,6 +17,20 @@ completed weights, not progress toward every research objective in the PDF.
 | Final regression and real-model/browser verification | 10% | Complete | 17/17 agent tests; six real model fixes; 25/25 final repo tests |
 
 ## Current verification
+
+- 16 Nov detection audit: all 6 planted findings at the expected file/line/rule,
+  with no additional findings in the pristine demo. This does not establish
+  general detector accuracy. Of 24 independent curated probes, 10 matched the
+  expected result: 9 missed-detection cases and 5 false-positive cases remain.
+- The current live demo has 5 findings because its invoice path reader has
+  already been fixed. Its 25 tests show 23 passes and the 2 expected remaining
+  security failures. The existing invoice-reader edit was preserved.
+- Discovery is five handwritten AST rules; Ollama explains and repairs the
+  supplied findings. General error discovery is not implemented. A syntax error
+  currently aborts scanning, and sources larger than 64 KB are silently skipped.
+- Reproduce: python scripts/verify_detection.py. Detailed evidence is in
+  docs/detection-audit.json. The 100% percentage above is completion of the
+  bounded HIL demo, not complete error detection or production readiness.
 
 - Deterministic review tests cover generation without application, explicit
   single-use approvals, rejection with notes, stale IDs, changed workspaces,
